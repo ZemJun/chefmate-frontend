@@ -14,7 +14,7 @@ import { NotificationProvider } from './context/NotificationContext';
 let theme = createTheme({
   palette: {
     primary: {
-      main: '#2e7d32', // 一个更沉稳的绿色
+      main: '#2e7d32', // 更沉稳的绿色
       light: '#60ad5e',
       dark: '#005005',
     },

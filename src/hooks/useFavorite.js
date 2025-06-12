@@ -31,18 +31,18 @@ export const useFavorite = (initialRecipe) => {
     try {
       if (originalRecipe.is_favorited) {
         await unfavoriteRecipe(originalRecipe.id);
-        // 替换 alert
+
         showNotification("已取消收藏！", "info");
       } else {
         await favoriteRecipe(originalRecipe.id);
-        // 替换 alert
+
         showNotification("收藏成功！", "success");
       }
     } catch (error) {
       console.error("Favorite toggle failed:", error);
       // 如果API请求失败，将UI状态恢复到原始状态
       setRecipe(originalRecipe); 
-      // 替换 alert
+
       showNotification("操作失败，请稍后再试。", "error");
     }
   };

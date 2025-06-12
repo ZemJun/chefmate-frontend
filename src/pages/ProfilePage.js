@@ -69,7 +69,7 @@ function ProfilePage() {
 
     return (
         <Fade in={true}>
-        <Container maxWidth="lg"> {/* 稍微加宽容器 */}
+        <Container maxWidth="lg"> 
             <Paper sx={{ p: 4, mt: 4 }}>
                 <Typography variant="h4" gutterBottom>个人资料</Typography>
                 <Typography variant="h6" color="text.secondary" gutterBottom>用户名: {user.username}</Typography>
@@ -84,7 +84,7 @@ function ProfilePage() {
                 )}
 
                 <Box component="form" onSubmit={handleSubmit} noValidate>
-                    {/* vvvvvvvvvv FIX vvvvvvvvvv */}
+
                     <Grid container spacing={2} alignItems="center">
                         <Grid item xs={12} md={3}>
                             <TextField fullWidth label="邮箱" name="email" value={formData.email} onChange={handleChange} />

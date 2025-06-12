@@ -37,7 +37,6 @@ function FavoriteRecipesPage() {
                     <Typography color="text.secondary">你还没有收藏任何菜谱哦！</Typography>
                 )}
             </Box>
-            {/* 你可以在这里添加分页逻辑 */}
         </Box>
     );
 }

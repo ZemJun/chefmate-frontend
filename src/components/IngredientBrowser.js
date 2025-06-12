@@ -24,8 +24,7 @@ function IngredientBrowser({ open, onClose, onAdd, existingItemIds = new Set() }
             setSelectedIds(new Set());
             setSearchTerm('');
             
-            // 你的 getAllIngredients API 应该在后端被修改为不分页
-            // 这里我们假设它返回一个包含所有食材的数组
+            // 返回一个包含所有食材的数组
             import('../api/api').then(api => {
                 api.getAllIngredients()
                     .then(response => {

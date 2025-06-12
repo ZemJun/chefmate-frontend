@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('accessToken');
       if (token) {
         try {
-          // 可选：检查token是否过期
+          // 检查token是否过期
           const decodedToken = jwtDecode(token);
           if (decodedToken.exp * 1000 > Date.now()) {
             const response = await getUserProfile();
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-    // 可选：调用后端接口使refresh token失效
+    //调用后端接口使refresh token失效
   };
   
   const authContextValue = {

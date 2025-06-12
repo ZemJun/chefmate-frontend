@@ -54,7 +54,6 @@ function App() {
         >
           <Routes location={location}>
             <Route path="/" element={<HomePage />} />
-            {/* ... 其他所有 Route */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/recipes" element={<RecipeListPage />} />

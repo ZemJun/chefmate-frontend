@@ -24,13 +24,13 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 
-// --- Helper function to group items ---
+
 const groupItems = (items, groupBy) => {
     const groups = items.reduce((acc, item) => {
         let key;
         if (groupBy === 'category') {
            key = item.ingredient_category_display || '🛒 其他/未分类';
-        } else { // recipe
+        } else { 
            key = item.related_recipe_title || '🔧 手动添加/其他';
         }
         if (!acc[key]) {
@@ -44,7 +44,7 @@ const groupItems = (items, groupBy) => {
    return Object.entries(groups).sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
 };
 
-// --- Item Component ---
+
 const ShoppingItem = React.memo(({ item, groupBy, onToggle, onDelete }) => (
     <motion.div
         key={item.id} layout initial={{ opacity: 0, y: -10 }}
@@ -65,7 +65,7 @@ const ShoppingItem = React.memo(({ item, groupBy, onToggle, onDelete }) => (
     </motion.div>
 ));
 
-// --- Group Renderer Component ---
+
 const RenderGroups = ({ groupedData, groupBy, onToggle, onDelete, icon: Icon, title }) => (
      <Box sx={{ mt: 3, width: '100%' }}>
        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}><Icon sx={{ mr: 1, color: 'text.secondary'}} /><Typography variant="h6">{title} ({groupedData.reduce((acc, [, items]) => acc + items.length, 0)})</Typography></Box>
@@ -79,7 +79,7 @@ const RenderGroups = ({ groupedData, groupBy, onToggle, onDelete, icon: Icon, ti
     </Box>
 );
 
-// --- Main Page Component ---
+
 function ShoppingListPage() {
     const [items, setItems] = useState([]);
     const [newItemId, setNewItemId] = useState(null);

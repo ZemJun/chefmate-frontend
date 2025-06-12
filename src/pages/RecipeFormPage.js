@@ -45,7 +45,6 @@ function RecipeFormPage() {
     const [submitError, setSubmitError] = useState('');
     const [formErrors, setFormErrors] = useState({});
 
-    // ... (useEffect, handleChange, and other handlers remain the same)
     useEffect(() => {
         setLoading(true);
         const optionsPromise = Promise.all([getAllIngredients(), getDietaryTags()])

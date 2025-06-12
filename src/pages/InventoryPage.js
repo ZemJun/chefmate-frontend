@@ -4,7 +4,7 @@ import { getInventory, addInventoryItem, deleteInventoryItem, getAllIngredients 
 import Select from 'react-select';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNotification } from '../context/NotificationContext';
-import { useAuth } from '../context/AuthContext'; // <--- 1. 导入 useAuth
+import { useAuth } from '../context/AuthContext'; //导入 useAuth
 import {
     Box, Typography, Button, List, ListItem, ListItemText,
     IconButton, CircularProgress, Alert, Paper, Fade, Divider
@@ -22,7 +22,7 @@ function InventoryPage() {
     const [allIngredients, setAllIngredients] = useState([]);
     const [addError, setAddError] = useState('');
     const { showNotification } = useNotification(); 
-    const { user, loading: authLoading } = useAuth(); // <--- 2. 获取用户和认证加载状态
+    const { user, loading: authLoading } = useAuth(); // 获取用户和认证加载状态
 
     useEffect(() => {
         // 只在认证流程结束后且用户已登录时获取食材列表
@@ -36,7 +36,7 @@ function InventoryPage() {
             };
             fetchIngredients();
         }
-    }, [user, authLoading]); // <--- 依赖认证状态和用户
+    }, [user, authLoading]); // 依赖认证状态和用户
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -51,7 +51,7 @@ function InventoryPage() {
             }
         }
         setLoading(false);
-    }, [showNotification, user]); // <--- 依赖 user
+    }, [showNotification, user]); // 依赖 user
 
     useEffect(() => {
         // 同样，只在认证流程结束后且用户已登录时获取库存
@@ -62,7 +62,7 @@ function InventoryPage() {
             setItems([]);
             setLoading(false);
         }
-    }, [fetchData, user, authLoading]); // <--- 关键依赖
+    }, [fetchData, user, authLoading]); // 关键依赖
 
     const handleAddItem = async (e) => {
         e.preventDefault();

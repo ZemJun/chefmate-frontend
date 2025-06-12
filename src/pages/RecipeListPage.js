@@ -28,7 +28,7 @@ const itemVariants = {
 };
 
 function RecipeListPage() {
-    const { user, loading: authLoading } = useAuth(); // <--- 获取认证加载状态
+    const { user, loading: authLoading } = useAuth(); // 获取认证加载状态
     const { data: recipesData, loading, error, request: fetchRecipes } = useApi(getRecipes);
     const recipes = recipesData?.results || [];
     const totalPages = recipesData ? Math.ceil(recipesData.count / 10) : 1; 
@@ -77,7 +77,7 @@ function RecipeListPage() {
             }
         };
         fetchOptions();
-    }, [user, authLoading]); // <--- 依赖认证状态和用户
+    }, [user, authLoading]); // 依赖认证状态和用户
 
     useEffect(() => {
         const timer = setTimeout(() => {
