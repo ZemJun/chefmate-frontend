@@ -1,4 +1,4 @@
-// src/components/RecipeCard.js (修改后)
+// src/components/RecipeCard.js (优化布局后)
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +21,6 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-// 使用 MUI 的 Card 组件来创建一个更具吸引力的卡片
 function RecipeCard({ recipe: initialRecipe }) {
   const { user } = useAuth();
   const { recipe, toggleFavorite } = useFavorite(initialRecipe);
@@ -37,8 +36,9 @@ function RecipeCard({ recipe: initialRecipe }) {
   return (
     <Card 
       sx={{ 
-        width: 345, 
-        m: 2, 
+        // 移除固定宽度 width: 345 和 margin
+        // m: 2, 
+        height: '100%', // <--- 新增: 让卡片填满 Grid Item 的高度
         display: 'flex', 
         flexDirection: 'column',
         transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
@@ -48,6 +48,7 @@ function RecipeCard({ recipe: initialRecipe }) {
         }
       }}
     >
+      {/* ... 卡片内部其他代码保持不变 ... */}
       <Box sx={{ position: 'relative' }}>
         <Link to={`/recipes/${recipe.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
           <CardMedia
@@ -86,7 +87,6 @@ function RecipeCard({ recipe: initialRecipe }) {
           作者: {recipe.author_username || '匿名'}
         </Typography>
         
-        {/* 使用 Box 和 Chip 来展示标签信息，更美观 */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1, color: 'text.secondary' }}>
           <Tooltip title="难度">
             <SpeedIcon fontSize="small" />
@@ -98,7 +98,6 @@ function RecipeCard({ recipe: initialRecipe }) {
           <Typography variant="body2">{recipe.cooking_time_minutes || '?'} 分钟</Typography>
         </Box>
 
-        {/* 智能推荐的匹配度，使用 Chip 组件 */}
         {recipe.match_score !== undefined && recipe.match_score !== null && (
           <Chip 
             icon={<CheckCircleIcon />} 

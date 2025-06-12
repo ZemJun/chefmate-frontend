@@ -1,7 +1,9 @@
-// src/App.js (修改后)
+// src/App.js (添加页面过渡动画)
+
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout'; // <-- 导入新的 Layout
+import { Routes, Route, useLocation } from 'react-router-dom'; // 引入 useLocation
+import { AnimatePresence, motion } from 'framer-motion'; // 引入 framer-motion
+import Layout from './components/Layout';
 
 // 导入页面组件
 import HomePage from './pages/HomePage'; 
@@ -14,23 +16,58 @@ import InventoryPage from './pages/InventoryPage';
 import ShoppingListPage from './pages/ShoppingListPage';
 import RecipeFormPage from './pages/RecipeFormPage';
 import FavoriteRecipesPage from './pages/FavoriteRecipesPage'; 
-
 function App() {
+  const location = useLocation();
+
+  // 定义页面切换动画
+  const pageVariants = {
+    initial: {
+      opacity: 0,
+
+    },
+    in: {
+      opacity: 1,
+
+    },
+    out: {
+      opacity: 0,
+
+    },
+  };
+
+  const pageTransition = {
+    type: 'tween',
+    ease: 'anticipate',
+    duration: 0.4,
+  };
+
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/recipes" element={<RecipeListPage />} />
-        <Route path="/recipes/:id" element={<RecipeDetailPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/inventory" element={<InventoryPage />} />
-        <Route path="/shopping-list" element={<ShoppingListPage />} />
-        <Route path="/recipes/new" element={<RecipeFormPage />} />
-        <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
-        <Route path="/my-favorites" element={<FavoriteRecipesPage />} />
-      </Routes>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+        >
+          <Routes location={location}>
+            <Route path="/" element={<HomePage />} />
+            {/* ... 其他所有 Route */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/recipes" element={<RecipeListPage />} />
+            <Route path="/recipes/:id" element={<RecipeDetailPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/shopping-list" element={<ShoppingListPage />} />
+            <Route path="/recipes/new" element={<RecipeFormPage />} />
+            <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
+            <Route path="/my-favorites" element={<FavoriteRecipesPage />} />
+          </Routes>
+        </motion.div>
+      </AnimatePresence>
     </Layout>
   );
 }

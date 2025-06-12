@@ -39,6 +39,8 @@ export const getRecipes = (params) => apiClient.get('/recipes/', { params });
 export const getRecipeDetail = (id) => apiClient.get(`/recipes/${id}/`); 
 export const addRecipeToShoppingList = (id) => apiClient.post(`/recipes/${id}/add_to_shopping_list/`);
 
+export const getSimpleRecipeList = () => apiClient.get('/recipes/simple-list/');
+
 export const createRecipe = (formData) => apiClient.post('/recipes/', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
@@ -62,7 +64,7 @@ export const deleteInventoryItem = (id) => apiClient.delete(`/users/inventory/${
 
 export const getShoppingList = (params = {}) => apiClient.get('/users/shopping-list/', { params });
 export const addShoppingListItem = (data) => apiClient.post('/users/shopping-list/', data);
-export const updateShoppingListItem = (id, data) => apiClient.patch(`/users/shopping-list/${id}/`, data); // 用PATCH更新购买状态
+export const updateShoppingListItem = (id, data) => apiClient.patch(`/users/shopping-list/${id}/`, data);
 export const deleteShoppingListItem = (id) => apiClient.delete(`/users/shopping-list/${id}/`);
 export const clearPurchasedItems = () => apiClient.delete('/users/shopping-list/clear_purchased/');
 
