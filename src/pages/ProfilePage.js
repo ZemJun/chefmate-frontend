@@ -1,122 +1,144 @@
-// src/pages/ProfilePage.js
+// src/pages/ProfilePage.js (修复后)
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { updateUserProfile, getDietaryTags, getAllIngredients } from '../api/api';
+import { useApi } from '../hooks/useApi';
+
+import {
+    Container, Paper, Typography, Box, Grid, TextField, Button,
+    CircularProgress, Alert, Autocomplete, Chip, Fade
+} from '@mui/material';
 
 function ProfilePage() {
-  const { user, setUser, loading: authLoading } = useAuth();
-  const [formData, setFormData] = useState({
-    email: '',
-    nickname: '',
-    dietary_preferences: [],
-    disliked_ingredients: [],
-  });
-  const [allTags, setAllTags] = useState([]);
-  const [allIngredients, setAllIngredients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
+    const { user, setUser, loading: authLoading } = useAuth();
+    const { loading: isUpdating, error: updateError, request: submitProfileUpdate } = useApi(updateUserProfile);
 
-  // 初始化，获取所有可选标签和食材
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [tagsRes, ingredientsRes] = await Promise.all([
-          getDietaryTags(),
-          getAllIngredients(),
-        ]);
-        setAllTags(tagsRes.data);
-        // 为了性能，食材列表可能非常大，这里可以考虑使用支持搜索的选择框组件
-        setAllIngredients(ingredientsRes.data.results || ingredientsRes.data);
-      } catch (error) {
-        console.error("Failed to fetch options", error);
-      }
+    const [formData, setFormData] = useState({
+        email: '', nickname: '', dietary_preferences: [], disliked_ingredients: [],
+    });
+    const [allTags, setAllTags] = useState([]);
+    const [allIngredients, setAllIngredients] = useState([]);
+    const [optionsLoading, setOptionsLoading] = useState(true);
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setOptionsLoading(true);
+            try {
+                const [tagsRes, ingredientsRes] = await Promise.all([getDietaryTags(), getAllIngredients()]);
+                setAllTags(tagsRes.data.results || tagsRes.data);
+                setAllIngredients(ingredientsRes.data.results || ingredientsRes.data);
+            } catch (error) { console.error("Failed to fetch options", error); }
+            finally { setOptionsLoading(false); }
+        };
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                email: user.email || '', nickname: user.nickname || '',
+                dietary_preferences: user.dietary_preferences || [],
+                disliked_ingredients: user.disliked_ingredients || [],
+            });
+        }
+    }, [user]);
+
+    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    const handleAutocompleteChange = (field, newValue) => {
+        const names = newValue.map(item => item.name);
+        setFormData(prev => ({ ...prev, [field]: names }));
     };
-    fetchData();
-  }, []);
 
-  // 当用户信息加载完毕后，填充表单
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        email: user.email || '',
-        nickname: user.nickname || '',
-        // SlugRelatedField 在后端接收的是名称列表
-        dietary_preferences: user.dietary_preferences || [],
-        disliked_ingredients: user.disliked_ingredients || [],
-      });
-      setLoading(false);
-    }
-  }, [user]);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setMessage('');
+        try {
+            const updatedUser = await submitProfileUpdate(formData);
+            setUser(updatedUser);
+            setMessage('个人资料更新成功！');
+        } catch (error) {
+            setMessage('更新失败，请检查输入。');
+            console.error("Update profile failed", error);
+        }
+    };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-  
-  const handleMultiSelectChange = (e, field) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setFormData({ ...formData, [field]: selectedOptions });
-  };
+    if (authLoading || optionsLoading) return <CircularProgress sx={{ display: 'block', margin: 'auto', mt: 4 }} />;
+    if (!user) return <p>请先登录以查看您的个人资料。</p>;
 
+    return (
+        <Fade in={true}>
+        <Container maxWidth="lg"> {/* 稍微加宽容器 */}
+            <Paper sx={{ p: 4, mt: 4 }}>
+                <Typography variant="h4" gutterBottom>个人资料</Typography>
+                <Typography variant="h6" color="text.secondary" gutterBottom>用户名: {user.username}</Typography>
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    try {
-      const response = await updateUserProfile(formData);
-      setUser(response.data); // 更新全局用户状态
-      setMessage('个人资料更新成功！');
-    } catch (error) {
-      console.error("Update profile failed", error);
-      setMessage('更新失败，请检查输入或稍后再试。');
-    }
-  };
+                {message && <Alert severity={message.includes('成功') ? 'success' : 'error'} sx={{ mb: 2 }}>{message}</Alert>}
+                {updateError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {Object.entries(updateError).map(([field, errors]) => (
+                            <div key={field}>{field}: {Array.isArray(errors) ? errors.join(', ') : String(errors)}</div>
+                        ))}
+                    </Alert>
+                )}
 
-  if (authLoading || loading) return <p>正在加载您的个人资料...</p>;
-  if (!user) return <p>请先登录以查看您的个人资料。</p>;
-
-  return (
-    <div>
-      <h2>个人资料</h2>
-      <p>用户名: {user.username} (不可修改)</p>
-      {message && <p style={{ color: 'green' }}>{message}</p>}
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>邮箱:</label>
-          <input type="email" name="email" value={formData.email} onChange={handleChange} />
-        </div>
-        <div>
-          <label>昵称:</label>
-          <input type="text" name="nickname" value={formData.nickname} onChange={handleChange} />
-        </div>
-        <div>
-          <label>饮食偏好:</label>
-          <select 
-            multiple 
-            name="dietary_preferences" 
-            value={formData.dietary_preferences}
-            onChange={(e) => handleMultiSelectChange(e, 'dietary_preferences')}
-            size="5"
-          >
-            {allTags.map(tag => <option key={tag.name} value={tag.name}>{tag.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label>不吃的食材:</label>
-          {/* 对于大量选项，更好的UI是带搜索功能的多选框 (e.g., react-select) */}
-          <select 
-            multiple 
-            name="disliked_ingredients" 
-            value={formData.disliked_ingredients}
-            onChange={(e) => handleMultiSelectChange(e, 'disliked_ingredients')}
-            size="8"
-          >
-            {allIngredients.map(ing => <option key={ing.name} value={ing.name}>{ing.name}</option>)}
-          </select>
-        </div>
-        <button type="submit">保存更改</button>
-      </form>
-    </div>
-  );
+                <Box component="form" onSubmit={handleSubmit} noValidate>
+                    {/* vvvvvvvvvv FIX vvvvvvvvvv */}
+                    <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} md={3}>
+                            <TextField fullWidth label="邮箱" name="email" value={formData.email} onChange={handleChange} />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <TextField fullWidth label="昵称" name="nickname" value={formData.nickname} onChange={handleChange} />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <Autocomplete
+                                multiple
+                                id="dietary-preferences"
+                                options={allTags}
+                                getOptionLabel={(option) => option.name}
+                                value={allTags.filter(tag => formData.dietary_preferences.includes(tag.name))}
+                                onChange={(event, newValue) => handleAutocompleteChange('dietary_preferences', newValue)}
+                                renderTags={(value, getTagProps) =>
+                                    value.map((option, index) => (
+                                        <Chip variant="outlined" label={option.name} {...getTagProps({ index })} />
+                                    ))
+                                }
+                                renderInput={(params) => (
+                                    <TextField {...params} variant="outlined" label="饮食偏好" />
+                                )}
+                            />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                            <Autocomplete
+                                multiple
+                                id="disliked-ingredients"
+                                options={allIngredients}
+                                getOptionLabel={(option) => option.name}
+                                value={allIngredients.filter(ing => formData.disliked_ingredients.includes(ing.name))}
+                                onChange={(event, newValue) => handleAutocompleteChange('disliked_ingredients', newValue)}
+                                renderTags={(value, getTagProps) =>
+                                    value.map((option, index) => (
+                                        <Chip variant="outlined" label={option.name} {...getTagProps({ index })} />
+                                    ))
+                                }
+                                renderInput={(params) => (
+                                    <TextField {...params} variant="outlined" label="不吃的食材" />
+                                )}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sx={{ textAlign: 'center', mt: 2 }}>
+                            <Button type="submit" variant="contained" size="large" disabled={isUpdating}>
+                                {isUpdating ? <CircularProgress size={24} /> : '保存更改'}
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Box>
+            </Paper>
+        </Container>
+        </Fade>
+    );
 }
 
 export default ProfilePage;

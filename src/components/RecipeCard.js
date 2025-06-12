@@ -1,83 +1,116 @@
-// src/components/RecipeCard.js
-
+// src/components/RecipeCard.js (修改后)
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useFavorite } from '../hooks/useFavorite'; // <-- 导入自定义 Hook
+import { useFavorite } from '../hooks/useFavorite';
 
-const cardStyle = {
-  border: '1px solid #ccc',
-  borderRadius: '8px',
-  padding: '16px',
-  margin: '16px',
-  width: '300px',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  position: 'relative', // 为了定位收藏按钮
-};
+// 导入 MUI 组件
+import { 
+  Card, 
+  CardMedia, 
+  CardContent, 
+  Typography, 
+  IconButton, 
+  Box,
+  Tooltip,
+  Chip
+} from '@mui/material';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import SpeedIcon from '@mui/icons-material/Speed';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-const imageStyle = {
-  width: '100%',
-  height: '180px',
-  objectFit: 'cover',
-  borderRadius: '4px',
-};
-
-const favoriteButtonStyle = {
-  position: 'absolute',
-  top: '25px',
-  right: '25px',
-  background: 'rgba(255, 255, 255, 0.8)',
-  border: 'none',
-  borderRadius: '50%',
-  width: '40px',
-  height: '40px',
-  cursor: 'pointer',
-  fontSize: '24px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-};
-
-// 使用传入的 recipe 作为初始值来调用 useFavorite Hook
+// 使用 MUI 的 Card 组件来创建一个更具吸引力的卡片
 function RecipeCard({ recipe: initialRecipe }) {
   const { user } = useAuth();
   const { recipe, toggleFavorite } = useFavorite(initialRecipe);
 
   const handleFavoriteClick = (e) => {
-    e.preventDefault(); // 阻止点击事件冒泡到 Link 组件
+    e.preventDefault();
     e.stopPropagation();
     toggleFavorite();
   };
 
-  if (!recipe) return null; // 如果没有 recipe 数据，不渲染任何东西
+  if (!recipe) return null;
 
   return (
-    <div style={cardStyle}>
-      <Link to={`/recipes/${recipe.id}`}>
-        <img 
-          src={recipe.main_image || 'https://via.placeholder.com/300x180.png?text=No+Image'} 
-          alt={recipe.title} 
-          style={imageStyle}
-        />
-        <h3>{recipe.title}</h3>
-      </Link>
-      
-      {/* 收藏按钮 */}
-      {user && (
-        <button onClick={handleFavoriteClick} style={favoriteButtonStyle} title={recipe.is_favorited ? '取消收藏' : '收藏'}>
-          {recipe.is_favorited ? '❤️' : '🤍'}
-        </button>
-      )}
+    <Card 
+      sx={{ 
+        width: 345, 
+        m: 2, 
+        display: 'flex', 
+        flexDirection: 'column',
+        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+        '&:hover': {
+          transform: 'translateY(-5px)',
+          boxShadow: 6,
+        }
+      }}
+    >
+      <Box sx={{ position: 'relative' }}>
+        <Link to={`/recipes/${recipe.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <CardMedia
+            component="img"
+            height="194"
+            image={recipe.main_image || 'https://via.placeholder.com/345x194.png?text=ChefMate+AI'}
+            alt={recipe.title}
+          />
+        </Link>
+        {user && (
+          <Tooltip title={recipe.is_favorited ? '取消收藏' : '收藏'}>
+            <IconButton
+              onClick={handleFavoriteClick}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                '&:hover': {
+                  backgroundColor: 'white',
+                }
+              }}
+            >
+              {recipe.is_favorited ? <FavoriteIcon color="secondary" /> : <FavoriteBorderIcon />}
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
+      <CardContent sx={{ flexGrow: 1 }}>
+        <Link to={`/recipes/${recipe.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Typography gutterBottom variant="h6" component="div" noWrap title={recipe.title}>
+            {recipe.title}
+          </Typography>
+        </Link>
+        <Typography variant="body2" color="text.secondary" sx={{ minHeight: 40 }}>
+          作者: {recipe.author_username || '匿名'}
+        </Typography>
+        
+        {/* 使用 Box 和 Chip 来展示标签信息，更美观 */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1, color: 'text.secondary' }}>
+          <Tooltip title="难度">
+            <SpeedIcon fontSize="small" />
+          </Tooltip>
+          <Typography variant="body2">{recipe.difficulty || '未知'}</Typography>
+          <Tooltip title="烹饪时间">
+            <AccessTimeIcon fontSize="small" sx={{ ml: 1 }}/>
+          </Tooltip>
+          <Typography variant="body2">{recipe.cooking_time_minutes || '?'} 分钟</Typography>
+        </Box>
 
-      <p>难度: {recipe.difficulty || '未知'} | 烹饪时间: {recipe.cooking_time_minutes || '?'} 分钟</p>
-      <p>作者: {recipe.author_username || '匿名'}</p>
-      {recipe.match_score !== undefined && recipe.match_score !== null && (
-        <p style={{ color: 'green', fontWeight: 'bold' }}>
-          食材匹配度: {Math.round(recipe.match_score * 100)}%
-        </p>
-      )}
-    </div>
+        {/* 智能推荐的匹配度，使用 Chip 组件 */}
+        {recipe.match_score !== undefined && recipe.match_score !== null && (
+          <Chip 
+            icon={<CheckCircleIcon />} 
+            label={`食材匹配度: ${Math.round(recipe.match_score * 100)}%`} 
+            color="primary"
+            variant="outlined"
+            size="small"
+            sx={{ mt: 2 }}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

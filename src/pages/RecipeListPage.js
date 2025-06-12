@@ -1,216 +1,194 @@
-import React, { useState, useEffect, useCallback } from 'react';
+// src/pages/RecipeListPage.js (最终修复版)
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getRecipes, getDietaryTags, getInventory } from '../api/api';
 import RecipeCard from '../components/RecipeCard';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
+import {
+    Box, Button, Typography, TextField, FormControl, InputLabel, Select, MenuItem,
+    Grid, Paper, CircularProgress, Alert, FormGroup, FormControlLabel, Checkbox, Accordion, AccordionSummary, AccordionDetails
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AddIcon from '@mui/icons-material/Add';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 const listContainerStyle = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  justifyContent: 'center',
-};
-
-const filterSectionStyle = {
-  padding: '20px',
-  margin: '20px 0',
-  border: '1px solid #ddd',
-  borderRadius: '8px',
-  backgroundColor: '#f9f9f9',
+    display: 'flex',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
 };
 
 function RecipeListPage() {
-  const [recipes, setRecipes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  
-  const [filters, setFilters] = useState({
-    search: '',
-    cooking_time_minutes__lte: '',
-    difficulty: '',
-    cuisine_type__icontains: '',
-    dietary_tags__name__in: [],
-    available_ingredients: '',
-  });
-  
-  const [allTags, setAllTags] = useState([]);
-  const [userInventory, setUserInventory] = useState([]);
-  const [selectedInventoryForSearch, setSelectedInventoryForSearch] = useState([]);
-  const { user } = useAuth();
+    const { user } = useAuth();
+    const { data: recipesData, loading, error, request: fetchRecipes } = useApi(getRecipes);
+    const recipes = recipesData?.results || [];
 
-  useEffect(() => {
-    getDietaryTags().then(res => setAllTags(res.data.results || res.data)).catch(err => console.error(err));
-    if (user) {
-      getInventory().then(res => setUserInventory(res.data.results || res.data)).catch(err => console.error(err));
-    } else {
-      setUserInventory([]);
-    }
-  }, [user]);
-
-  const fetchRecipes = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    
-    const activeFilters = {};
-    for (const key in filters) {
-      const value = filters[key];
-      if (value !== null && value !== '' && value.length !== 0) {
-        if (Array.isArray(value)) {
-          activeFilters[key] = value.join(',');
-        } else {
-          activeFilters[key] = value;
-        }
-      }
-    }
-    
-    try {
-      const response = await getRecipes(activeFilters);
-      setRecipes(response.data.results || []);
-    } catch (err) {
-      setError('获取菜谱失败，请稍后再试。');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchRecipes();
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [fetchRecipes]);
-
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleTagChange = (e) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setFilters(prev => ({ ...prev, dietary_tags__name__in: selectedOptions }));
-  };
-  
-  const handleResetFilters = () => {
-    setSelectedInventoryForSearch([]);
-    setFilters({
-      search: '',
-      cooking_time_minutes__lte: '',
-      difficulty: '',
-      cuisine_type__icontains: '',
-      dietary_tags__name__in: [],
-      available_ingredients: '',
+    const [filters, setFilters] = useState({
+        search: '', cooking_time_minutes__lte: '', difficulty: '',
+        cuisine_type__icontains: '', dietary_tags__name__in: [], available_ingredients: '',
     });
-  };
-  
-  const handleInventorySelectChange = (e) => {
-    const { value, checked } = e.target;
-    if (checked) {
-      setSelectedInventoryForSearch(prev => [...prev, value]);
-    } else {
-      setSelectedInventoryForSearch(prev => prev.filter(id => id !== value));
-    }
-  };
-  
-  const handleSmartSearch = () => {
-    // VVVVVV  这里是针对问题2的优化 VVVVVV
-    // 只有在用户确实选择了食材时才设置过滤器
-    // 否则，确保该过滤器为空，这样就不会影响其他过滤条件
-    const newAvailableIngredients = selectedInventoryForSearch.join(',');
-    if (filters.available_ingredients !== newAvailableIngredients) {
-        setFilters(prev => ({
-            ...prev,
-            available_ingredients: newAvailableIngredients,
-        }));
-    }
-    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  };
+    
+    const [allTags, setAllTags] = useState([]);
+    const [userInventory, setUserInventory] = useState([]);
+    const [optionsLoading, setOptionsLoading] = useState(true);
 
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+    const [selectedInventoryForSearch, setSelectedInventoryForSearch] = useState([]);
 
-  return (
-    <div>
-      <h2>所有菜谱</h2>
-      {user && (
-          <Link to="/recipes/new" style={{ marginRight: '20px' }}>
-              <button>创建新菜谱</button>
-          </Link>
-      )}
-      <button onClick={handleResetFilters}>重置所有筛选</button>
-      
-      <div style={filterSectionStyle}>
-        <h3>筛选菜谱</h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-          <input 
-            type="text" 
-            name="search"
-            placeholder="按名称或描述搜索..."
-            value={filters.search}
-            onChange={handleFilterChange}
-            style={{flex: '1 1 200px'}}
-          />
-          <input 
-            type="number"
-            name="cooking_time_minutes__lte"
-            placeholder="最长烹饪时间(分钟)"
-            value={filters.cooking_time_minutes__lte}
-            onChange={handleFilterChange}
-            style={{flex: '1 1 200px'}}
-          />
-          <select name="difficulty" value={filters.difficulty} onChange={handleFilterChange} style={{flex: '1 1 150px'}}>
-            <option value="">所有难度</option>
-            <option value="1">简单</option>
-            <option value="2">中等</option>
-            <option value="3">困难</option>
-          </select>
-          <input 
-            type="text"
-            name="cuisine_type__icontains"
-            placeholder="菜系 (如: 川菜)"
-            value={filters.cuisine_type__icontains}
-            onChange={handleFilterChange}
-            style={{flex: '1 1 200px'}}
-          />
-          <select multiple size="5" onChange={handleTagChange} value={filters.dietary_tags__name__in} style={{flex: '1 1 200px'}}>
-             {allTags.map(tag => <option key={tag.id} value={tag.name}>{tag.name}</option>)}
-          </select>
-        </div>
-      </div>
-      
-      {user && userInventory.length > 0 && (
-        <div style={filterSectionStyle}>
-          <h3>根据我的库存推荐</h3>
-          <p>勾选你拥有的食材：</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', maxHeight: '150px', overflowY: 'auto', border: '1px solid #ccc', padding: '10px' }}>
-            {userInventory.map(item => (
-              <div key={item.id}>
-                {/* VVVVVV 这里现在可以正常工作了，因为后端会返回 item.ingredient VVVVVV */}
-                <input 
-                  type="checkbox"
-                  id={`inv-item-${item.ingredient}`}
-                  value={item.ingredient}
-                  onChange={handleInventorySelectChange}
-                  checked={selectedInventoryForSearch.includes(String(item.ingredient))}
-                />
-                <label htmlFor={`inv-item-${item.ingredient}`}>{item.ingredient_name}</label>
-              </div>
-            ))}
-          </div>
-          <button onClick={handleSmartSearch} style={{marginTop: '10px'}}>开始智能推荐</button>
-        </div>
-      )}
-      
-      {loading ? <p>正在加载菜谱...</p> : (
-        <div style={listContainerStyle}>
-          {recipes.length > 0 ? (
-            recipes.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} />)
-          ) : (
-            <p>没有找到符合条件的菜谱。</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
+    useEffect(() => {
+        setOptionsLoading(true);
+        const fetchOptions = async () => {
+            try {
+                const tagsPromise = getDietaryTags();
+                const inventoryPromise = user ? getInventory() : Promise.resolve(null);
+
+                const [tagsRes, inventoryRes] = await Promise.all([tagsPromise, inventoryPromise]);
+                
+                setAllTags(tagsRes?.data?.results || tagsRes?.data || []);
+
+                if (inventoryRes) {
+                    setUserInventory(inventoryRes?.data?.results || inventoryRes?.data || []);
+                } else {
+                    setUserInventory([]);
+                }
+
+            } catch (err) {
+                console.error("Failed to fetch filter options", err);
+                setAllTags([]);
+                setUserInventory([]);
+            } finally {
+                setOptionsLoading(false);
+            }
+        };
+
+        fetchOptions();
+    }, [user]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const activeFilters = {};
+            for (const key in filters) {
+                const value = filters[key];
+                if (value !== null && value !== '' && value.length !== 0) {
+                    activeFilters[key] = Array.isArray(value) ? value.join(',') : value;
+                }
+            }
+            fetchRecipes(activeFilters);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [filters, fetchRecipes]);
+
+    const handleFilterChange = (e) => setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleTagChange = (e) => setFilters(prev => ({ ...prev, dietary_tags__name__in: e.target.value }));
+    const handleResetFilters = () => {
+        setSelectedInventoryForSearch([]);
+        setFilters({ search: '', cooking_time_minutes__lte: '', difficulty: '', cuisine_type__icontains: '', dietary_tags__name__in: [], available_ingredients: '' });
+    };
+    const handleInventorySelectChange = (e) => {
+        const { value, checked } = e.target;
+        setSelectedInventoryForSearch(prev => checked ? [...prev, value] : prev.filter(id => id !== value));
+    };
+    const handleSmartSearch = () => setFilters(prev => ({ ...prev, available_ingredients: selectedInventoryForSearch.join(',') }));
+
+    if (error) return <Alert severity="error">获取菜谱失败，请稍后再试。</Alert>;
+
+    return (
+        // vvvvvvvvvv FIX: 确保返回一个单一的根元素 <Box> vvvvvvvvvv
+        <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h4">所有菜谱</Typography>
+                <Box>
+                    {user && (
+                        <Button component={Link} to="/recipes/new" variant="contained" startIcon={<AddIcon />} sx={{ mr: 2 }}>
+                            创建新菜谱
+                        </Button>
+                    )}
+                    <Button variant="outlined" onClick={handleResetFilters} startIcon={<RestartAltIcon />}>
+                        重置筛选
+                    </Button>
+                </Box>
+            </Box>
+
+            <Paper sx={{ p: 2, mb: 4 }}>
+                <Accordion defaultExpanded>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography>筛选与搜索</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        {optionsLoading ? <CircularProgress size={20} /> : (
+                            <Grid container spacing={2} alignItems="center">
+                                <Grid item xs={12} sm={6} md={3}>
+                                    <TextField fullWidth label="按名称或描述搜索..." name="search" value={filters.search} onChange={handleFilterChange} variant="outlined" />
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={3}>
+                                    <TextField fullWidth type="number" label="最长烹饪时间(分钟)" name="cooking_time_minutes__lte" value={filters.cooking_time_minutes__lte} onChange={handleFilterChange} variant="outlined" />
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={2}>
+                                    <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
+                                        <InputLabel>难度</InputLabel>
+                                        <Select label="难度" name="difficulty" value={filters.difficulty} onChange={handleFilterChange}>
+                                            <MenuItem value="">所有难度</MenuItem><MenuItem value="1">简单</MenuItem><MenuItem value="2">中等</MenuItem><MenuItem value="3">困难</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} sm={6} md={4}>
+                                    <TextField fullWidth label="菜系 (如: 川菜)" name="cuisine_type__icontains" value={filters.cuisine_type__icontains} onChange={handleFilterChange} variant="outlined" />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <FormControl fullWidth variant="outlined">
+                                        <InputLabel>饮食标签</InputLabel>
+                                        <Select multiple label="饮食标签" name="dietary_tags__name__in" value={filters.dietary_tags__name__in} onChange={handleTagChange}>
+                                            {allTags.map(tag => (
+                                                <MenuItem key={tag.id} value={tag.name}>{tag.name}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                            </Grid>
+                        )}
+                    </AccordionDetails>
+                </Accordion>
+            </Paper>
+
+            {user && (
+                <Paper sx={{ p: 2, mb: 4 }}>
+                    <Accordion>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography>根据我的库存推荐</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                            {optionsLoading ? <CircularProgress size={20} /> : userInventory.length > 0 ? (
+                                <>
+                                    <Typography variant="body1" sx={{ mb: 1 }}>勾选你拥有的食材：</Typography>
+                                    <FormGroup sx={{ display: 'flex', flexDirection: 'row', maxHeight: '150px', flexWrap: 'wrap', overflowY: 'auto' }}>
+                                        {userInventory.map(item => (
+                                            <FormControlLabel key={item.id}
+                                                control={<Checkbox value={item.ingredient} onChange={handleInventorySelectChange} checked={selectedInventoryForSearch.includes(String(item.ingredient))} />}
+                                                label={item.ingredient_name}
+                                            />
+                                        ))}
+                                    </FormGroup>
+                                    <Button onClick={handleSmartSearch} variant="contained" sx={{ mt: 2 }}>开始智能推荐</Button>
+                                </>
+                            ) : (
+                                <Typography color="text.secondary">你的库存是空的，快去添加吧！</Typography>
+                            )}
+                        </AccordionDetails>
+                    </Accordion>
+                </Paper>
+            )}
+
+            {loading ? <CircularProgress sx={{ display: 'block', margin: 'auto' }} /> : (
+                <Box sx={listContainerStyle}>
+                    {recipes.length > 0 ? (
+                        recipes.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} />)
+                    ) : (
+                        <Typography sx={{ mt: 4 }}>没有找到符合条件的菜谱。</Typography>
+                    )}
+                </Box>
+            )}
+        </Box> // <--- 唯一的根元素闭合标签
+    );
 }
 
 export default RecipeListPage;

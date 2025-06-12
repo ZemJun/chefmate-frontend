@@ -1,40 +1,26 @@
 // src/pages/RecipeDetailPage.js
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getRecipeDetail, addRecipeToShoppingList } from '../api/api';
 import { useAuth } from '../context/AuthContext';
-import { useFavorite } from '../hooks/useFavorite'; // <-- 导入自定义 Hook
+import { useFavorite } from '../hooks/useFavorite';
+import { useApi } from '../hooks/useApi'; // <-- 导入 useApi
 import ReviewSection from '../components/ReviewSection';
 
 function RecipeDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
   
-  // 使用一个本地 state 来存储从 API 获取的原始数据
-  const [initialRecipe, setInitialRecipe] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  // <-- 使用 useApi Hook 来管理数据获取、加载和错误状态
+  const { data: initialRecipe, loading, error, request: fetchRecipe } = useApi(getRecipeDetail);
   
-  // 将获取到的原始数据传递给 useFavorite Hook
+  // <-- useFavorite Hook 依然接收 useApi 返回的数据
   const { recipe, toggleFavorite } = useFavorite(initialRecipe);
 
+  // <-- useEffect 逻辑大大简化
   useEffect(() => {
-    const fetchRecipe = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const response = await getRecipeDetail(id);
-        setInitialRecipe(response.data);
-      } catch (err) {
-        setError('获取菜谱详情失败。');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRecipe();
-  }, [id]);
+    fetchRecipe(id);
+  }, [id, fetchRecipe]); // fetchRecipe 是由 useCallback 包装的，依赖稳定
 
   const handleAddToShoppingList = async () => {
     try {
@@ -50,8 +36,9 @@ function RecipeDetailPage() {
     }
   };
 
+  // <-- 加载和错误状态直接来自 useApi Hook
   if (loading) return <p>正在加载...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
+  if (error) return <p style={{ color: 'red' }}>获取菜谱详情失败: {error.detail || '请刷新页面重试'}</p>;
   if (!recipe) return <p>未找到该菜谱。</p>;
 
   return (
