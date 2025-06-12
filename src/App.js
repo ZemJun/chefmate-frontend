@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage';
 import InventoryPage from './pages/InventoryPage';
 import ShoppingListPage from './pages/ShoppingListPage';
 import RecipeFormPage from './pages/RecipeFormPage';
+import FavoriteRecipesPage from './pages/FavoriteRecipesPage'; 
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="/shopping-list" element={<ShoppingListPage />} />
         <Route path="/recipes/new" element={<RecipeFormPage />} />
         <Route path="/recipes/:id/edit" element={<RecipeFormPage />} />
+        <Route path="/my-favorites" element={<FavoriteRecipesPage />} />
       </Routes>
     </Layout>
   );

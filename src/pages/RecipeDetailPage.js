@@ -1,77 +1,106 @@
-// src/pages/RecipeDetailPage.js
+// src/pages/RecipeDetailPage.js (替换后的完整代码)
+
 import React, { useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { getRecipeDetail, addRecipeToShoppingList } from '../api/api';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getRecipeDetail, addRecipeToShoppingList, deleteRecipe } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { useFavorite } from '../hooks/useFavorite';
-import { useApi } from '../hooks/useApi'; // <-- 导入 useApi
+import { useApi } from '../hooks/useApi';
+import { useNotification } from '../context/NotificationContext'; // 导入通知 hook
 import ReviewSection from '../components/ReviewSection';
+
+import { Box, Button, Typography, CircularProgress, Alert, Paper } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 
 function RecipeDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
-  
-  // <-- 使用 useApi Hook 来管理数据获取、加载和错误状态
+  const navigate = useNavigate();
+  const { showNotification } = useNotification(); // 获取通知函数
+
   const { data: initialRecipe, loading, error, request: fetchRecipe } = useApi(getRecipeDetail);
-  
-  // <-- useFavorite Hook 依然接收 useApi 返回的数据
   const { recipe, toggleFavorite } = useFavorite(initialRecipe);
 
-  // <-- useEffect 逻辑大大简化
   useEffect(() => {
     fetchRecipe(id);
-  }, [id, fetchRecipe]); // fetchRecipe 是由 useCallback 包装的，依赖稳定
+  }, [id, fetchRecipe]);
 
   const handleAddToShoppingList = async () => {
     try {
       const response = await addRecipeToShoppingList(id);
-      alert(response.data.detail);
+      // 替换 alert
+      showNotification(response.data.detail, 'success');
     } catch (err) {
-      if (err.response && err.response.data.detail) {
-        alert(`操作失败: ${err.response.data.detail}`);
-      } else {
-        alert('添加到购物清单失败，请稍后再试。');
-      }
+      // 替换 alert
+      const errorMessage = err.response?.data?.detail || '添加到购物清单失败，请稍后再试。';
+      showNotification(errorMessage, 'error');
       console.error(err);
     }
   };
 
-  // <-- 加载和错误状态直接来自 useApi Hook
-  if (loading) return <p>正在加载...</p>;
-  if (error) return <p style={{ color: 'red' }}>获取菜谱详情失败: {error.detail || '请刷新页面重试'}</p>;
-  if (!recipe) return <p>未找到该菜谱。</p>;
+  const handleDeleteRecipe = async () => {
+    if (window.confirm(`确定要删除菜谱 "${recipe.title}" 吗？此操作不可撤销！`)) {
+      try {
+        await deleteRecipe(id);
+        // 替换 alert
+        showNotification('菜谱已删除。', 'info');
+        navigate('/recipes');
+      } catch (err) {
+        // 替换 alert
+        showNotification('删除失败，你可能没有权限或网络出错了。', 'error');
+        console.error(err);
+      }
+    }
+  };
+
+  if (loading) return <CircularProgress sx={{ display: 'block', margin: 'auto', mt: 4 }} />;
+  if (error) return <Alert severity="error" sx={{ mt: 4 }}>获取菜谱详情失败: {error.detail || '请刷新页面重试'}</Alert>;
+  if (!recipe) return <Alert severity="warning" sx={{ mt: 4 }}>未找到该菜谱。</Alert>;
 
   return (
-    <div style={{ maxWidth: '800px', margin: 'auto', padding: '20px' }}>
-      <img 
-        src={recipe.main_image || 'https://via.placeholder.com/600x400.png?text=No+Image'} 
+    <Paper elevation={3} sx={{ maxWidth: '800px', margin: 'auto', p: { xs: 2, md: 4 }, mt: 4 }}>
+      <Box 
+        component="img"
+        src={recipe.main_image || 'https://via.placeholder.com/800x400.png?text=No+Image'} 
         alt={recipe.title} 
-        style={{ width: '100%', borderRadius: '8px' }}
+        sx={{ width: '100%', borderRadius: 2, mb: 2 }}
       />
-      <h1>{recipe.title}</h1>
+      <Typography variant="h3" component="h1" gutterBottom>{recipe.title}</Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+        作者: {recipe.author_username || '匿名'} | 更新于: {new Date(recipe.updated_at).toLocaleDateString()}
+      </Typography>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', margin: '10px 0' }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, my: 3, borderBottom: '1px solid #eee', pb: 3 }}>
         {user && user.username === recipe.author_username && (
-          <Link to={`/recipes/${id}/edit`}>
-            <button>编辑菜谱</button>
-          </Link>
+          <>
+            <Button component={Link} to={`/recipes/${id}/edit`} variant="outlined" startIcon={<EditIcon />}>
+              编辑菜谱
+            </Button>
+            <Button onClick={handleDeleteRecipe} variant="outlined" color="error" startIcon={<DeleteIcon />}>
+              删除菜谱
+            </Button>
+          </>
         )}
         {user && (
-          <button onClick={handleAddToShoppingList}>一键加入购物清单</button>
+          <Button onClick={handleAddToShoppingList} variant="contained" startIcon={<ShoppingCartIcon />}>
+            一键加入购物清单
+          </Button>
         )}
         {user && (
-          <button onClick={toggleFavorite} style={{ fontSize: '16px' }}>
-            {recipe.is_favorited ? '❤️ 已收藏' : '🤍 收藏'}
-          </button>
+          <Button onClick={toggleFavorite} variant="contained" color="secondary" startIcon={recipe.is_favorited ? <FavoriteIcon /> : <FavoriteBorderIcon />}>
+            {recipe.is_favorited ? '已收藏' : '收藏'}
+          </Button>
         )}
-      </div>
+      </Box>
 
-      <p>作者: {recipe.author_username || '匿名'} | 更新于: {new Date(recipe.updated_at).toLocaleDateString()}</p>
-      
-      <h3>简介</h3>
-      <p>{recipe.description || '暂无简介'}</p>
+      <Typography variant="h5" component="h3">简介</Typography>
+      <Typography paragraph sx={{mb: 3}}>{recipe.description || '暂无简介'}</Typography>
 
-      <h3>所需食材</h3>
+      <Typography variant="h5" component="h3">所需食材</Typography>
       <ul>
         {recipe.recipe_ingredients.map(item => (
           <li key={item.ingredient_id}>
@@ -81,22 +110,22 @@ function RecipeDetailPage() {
         ))}
       </ul>
       
-      <h3>制作步骤</h3>
+      <Typography variant="h5" component="h3" sx={{mt: 3}}>制作步骤</Typography>
       {recipe.steps && recipe.steps.length > 0 ? (
         <ol>
           {recipe.steps.map(step => (
             <li key={step.id} style={{ marginBottom: '15px' }}>
-              <p>{step.description}</p>
-              {step.image && <img src={step.image} alt={`步骤 ${step.step_number}`} style={{maxWidth: '200px', borderRadius: '4px'}}/>}
+              <Typography>{step.description}</Typography>
+              {step.image && <Box component="img" src={step.image} alt={`步骤 ${step.step_number}`} sx={{maxWidth: '200px', borderRadius: 1, mt: 1}}/>}
             </li>
           ))}
         </ol>
       ) : (
-        <p>暂无详细步骤。</p>
+        <Typography paragraph>暂无详细步骤。</Typography>
       )}
 
       <ReviewSection recipeId={id} />
-    </div>
+    </Paper>
   );
 }
 

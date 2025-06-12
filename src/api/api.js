@@ -1,4 +1,5 @@
-// src/api/api.js
+// src/api/api.js (最终版)
+
 import axios from 'axios';
 
 // 创建一个axios实例，并设置基础URL
@@ -23,8 +24,8 @@ apiClient.interceptors.request.use(
   }
 );
 
-export const favoriteRecipe = (id) => apiClient.post(`/recipes/recipes/${id}/favorite/`);
-export const unfavoriteRecipe = (id) => apiClient.delete(`/recipes/recipes/${id}/favorite/`);
+export const favoriteRecipe = (id) => apiClient.post(`/recipes/${id}/favorite/`);
+export const unfavoriteRecipe = (id) => apiClient.delete(`/recipes/${id}/favorite/`);
 
 // --- 用户认证相关 API ---
 export const registerUser = (userData) => apiClient.post('/users/register/', userData);
@@ -34,23 +35,25 @@ export const updateUserProfile = (profileData) => apiClient.put('/users/profile/
 
 
 // --- 菜谱相关 API ---
-export const getRecipes = (params) => apiClient.get('/recipes/recipes/', { params });
-export const getRecipeDetail = (id) => apiClient.get(`/recipes/recipes/${id}/`);
-export const addRecipeToShoppingList = (id) => apiClient.post(`/recipes/recipes/${id}/add_to_shopping_list/`);
+export const getRecipes = (params) => apiClient.get('/recipes/', { params });
+export const getRecipeDetail = (id) => apiClient.get(`/recipes/${id}/`); 
+export const addRecipeToShoppingList = (id) => apiClient.post(`/recipes/${id}/add_to_shopping_list/`);
 
-export const createRecipe = (formData) => apiClient.post('/recipes/recipes/', formData, {
+export const createRecipe = (formData) => apiClient.post('/recipes/', formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
 
-export const updateRecipe = (id, formData) => apiClient.patch(`/recipes/recipes/${id}/`, formData, {
+export const updateRecipe = (id, formData) => apiClient.patch(`/recipes/${id}/`, formData, {
   headers: { 'Content-Type': 'multipart/form-data' }
 });
 
-export const deleteRecipe = (id) => apiClient.delete(`/recipes/recipes/${id}/`);
+export const deleteRecipe = (id) => apiClient.delete(`/recipes/${id}/`);
+export const getFavoriteRecipes = () => apiClient.get('/recipes/favorites/');
 
-// --- vvvvvvvvvv 获取所有标签和食材用于选择 vvvvvvvvvv
-export const getDietaryTags = () => apiClient.get('/recipes/dietary-tags/');
-export const getAllIngredients = () => apiClient.get('/recipes/ingredients/');
+
+// --- 获取所有标签和食材 ---
+export const getDietaryTags = () => apiClient.get('/dietary-tags/'); 
+export const getAllIngredients = () => apiClient.get('/ingredients/'); 
 
 // --- 用户个人数据相关 API ---
 export const getInventory = () => apiClient.get('/users/inventory/');
@@ -61,10 +64,14 @@ export const getShoppingList = (params = {}) => apiClient.get('/users/shopping-l
 export const addShoppingListItem = (data) => apiClient.post('/users/shopping-list/', data);
 export const updateShoppingListItem = (id, data) => apiClient.patch(`/users/shopping-list/${id}/`, data); // 用PATCH更新购买状态
 export const deleteShoppingListItem = (id) => apiClient.delete(`/users/shopping-list/${id}/`);
+export const clearPurchasedItems = () => apiClient.delete('/users/shopping-list/clear_purchased/');
+
 
 // --- 评价相关 API ---
-export const getReviewsForRecipe = (recipeId) => apiClient.get(`/recipes/recipes/${recipeId}/reviews/`);
-export const addReviewForRecipe = (recipeId, reviewData) => apiClient.post(`/recipes/recipes/${recipeId}/reviews/`, reviewData);
+export const getReviewsForRecipe = (recipeId) => apiClient.get(`/recipes/${recipeId}/reviews/`);
+export const addReviewForRecipe = (recipeId, reviewData) => apiClient.post(`/recipes/${recipeId}/reviews/`, reviewData);
+export const updateReview = (recipeId, reviewId, reviewData) => apiClient.patch(`/recipes/${recipeId}/reviews/${reviewId}/`, reviewData);
+export const deleteReview = (recipeId, reviewId) => apiClient.delete(`/recipes/${recipeId}/reviews/${reviewId}/`);
 
 
 export default apiClient;

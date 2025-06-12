@@ -1,7 +1,9 @@
-// src/pages/RegisterPage.js
+// src/pages/RegisterPage.js (替换后的完整代码)
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerUser } from '../api/api';
+import { useNotification } from '../context/NotificationContext'; // 导入通知 hook
 
 function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -13,6 +15,7 @@ function RegisterPage() {
   });
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+  const { showNotification } = useNotification(); // 获取通知函数
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -33,8 +36,8 @@ function RegisterPage() {
         password2: formData.password2,
         nickname: formData.nickname,
       });
-      // 注册成功后，提示用户并跳转到登录页面
-      alert('注册成功！请登录。');
+      // 替换 alert
+      showNotification('注册成功！请登录。', 'success');
       navigate('/login');
     } catch (err) {
       if (err.response && err.response.data) {
@@ -67,7 +70,7 @@ function RegisterPage() {
         <div>
           <label>密码:</label>
           <input type="password" name="password" value={formData.password} onChange={handleChange} required />
-          {errors.password && <p style={{ color: 'red' }}>{errors.password.join(' ')}</p>}
+          {errors.password && Array.isArray(errors.password) && <p style={{ color: 'red' }}>{errors.password.join(' ')}</p>}
         </div>
         <div>
           <label>确认密码:</label>

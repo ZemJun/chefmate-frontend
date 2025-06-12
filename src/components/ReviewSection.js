@@ -1,14 +1,16 @@
-// src/components/ReviewSection.js (修改后)
-import React, { useState, useEffect, useCallback } from 'react'; // <-- 导入 useCallback
-import { getReviewsForRecipe, addReviewForRecipe } from '../api/api';
-import { useAuth } from '../context/AuthContext';
+// src/components/ReviewSection.js (替换后的完整代码)
 
-// 我们也顺便用 MUI 组件来美化这个区域
+import React, { useState, useEffect, useCallback } from 'react';
+import { getReviewsForRecipe, addReviewForRecipe, deleteReview } from '../api/api';
+import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext'; // 导入通知 hook
+
 import {
-    Box, Typography, Button, TextField, Rating, // <-- 使用 MUI 的 Rating 组件
+    Box, Typography, Button, TextField, Rating,
     List, ListItem, ListItemText, ListItemAvatar, Avatar,
-    Divider, Alert, CircularProgress
+    Divider, Alert, CircularProgress, IconButton
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 function ReviewSection({ recipeId }) {
   const [reviews, setReviews] = useState([]);
@@ -18,8 +20,8 @@ function ReviewSection({ recipeId }) {
   const [newRating, setNewRating] = useState(5);
   const [error, setError] = useState('');
   const { user } = useAuth();
+  const { showNotification } = useNotification(); // 获取通知函数
 
-  // 使用 useCallback 包装 fetchReviews
   const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
@@ -29,9 +31,8 @@ function ReviewSection({ recipeId }) {
       console.error("Failed to fetch reviews", error);
     }
     setLoading(false);
-  }, [recipeId]); // <-- fetchReviews 依赖于 recipeId
+  }, [recipeId]);
 
-  // 现在可以安全地将 fetchReviews 加入依赖数组
   useEffect(() => {
     fetchReviews();
   }, [fetchReviews]);
@@ -48,7 +49,8 @@ function ReviewSection({ recipeId }) {
       await addReviewForRecipe(recipeId, { rating: newRating, comment: newComment });
       setNewComment('');
       setNewRating(5);
-      await fetchReviews(); // 成功后重新加载评价
+      showNotification('评价发表成功！', 'success');
+      await fetchReviews();
     } catch (err) {
       setError(err.response?.data?.detail || '发表评价失败，您可能已经评价过。');
       console.error(err);
@@ -56,11 +58,23 @@ function ReviewSection({ recipeId }) {
     setSubmitLoading(false);
   };
 
+  const handleDeleteReview = async (reviewId) => {
+    if (window.confirm('确定要删除这条评价吗？')) {
+      try {
+        await deleteReview(recipeId, reviewId);
+        showNotification('评价已删除。', 'info');
+        fetchReviews();
+      } catch (err) {
+        showNotification('删除失败！', 'error');
+        console.error(err);
+      }
+    }
+  };
+
   return (
     <Box sx={{ mt: 5, pt: 3, borderTop: '1px solid #eee' }}>
       <Typography variant="h5" gutterBottom>用户评价</Typography>
       
-      {/* 评价表单 */}
       {user && (
         <Box component="form" onSubmit={handleSubmitReview} sx={{ mb: 4 }}>
           <Typography variant="h6">发表你的评价</Typography>
@@ -89,13 +103,21 @@ function ReviewSection({ recipeId }) {
         </Box>
       )}
 
-      {/* 评价列表 */}
       {loading ? <CircularProgress /> : (
         <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
           {reviews.length > 0 ? (
             reviews.map((review, index) => (
               <React.Fragment key={review.id}>
-                <ListItem alignItems="flex-start">
+                <ListItem 
+                  alignItems="flex-start"
+                  secondaryAction={
+                    user && user.username === review.user_username && (
+                      <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteReview(review.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    )
+                  }
+                >
                   <ListItemAvatar>
                     <Avatar>{review.user_username.charAt(0).toUpperCase()}</Avatar>
                   </ListItemAvatar>

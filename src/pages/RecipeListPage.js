@@ -1,13 +1,13 @@
-// src/pages/RecipeListPage.js (最终修复版)
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getRecipes, getDietaryTags, getInventory } from '../api/api';
 import RecipeCard from '../components/RecipeCard';
+import RecipeCardSkeleton from '../components/RecipeCardSkeleton'; // 引入骨架屏
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
 import {
     Box, Button, Typography, TextField, FormControl, InputLabel, Select, MenuItem,
-    Grid, Paper, CircularProgress, Alert, FormGroup, FormControlLabel, Checkbox, Accordion, AccordionSummary, AccordionDetails
+    Grid, Paper, CircularProgress, Alert, FormGroup, FormControlLabel, Checkbox, Accordion, AccordionSummary, AccordionDetails, Pagination // 引入Pagination
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
@@ -17,12 +17,14 @@ const listContainerStyle = {
     display: 'flex',
     flexWrap: 'wrap',
     justifyContent: 'center',
+    gap: '16px', // 使用gap代替margin，布局更佳
 };
 
 function RecipeListPage() {
     const { user } = useAuth();
     const { data: recipesData, loading, error, request: fetchRecipes } = useApi(getRecipes);
     const recipes = recipesData?.results || [];
+    const totalPages = recipesData ? Math.ceil(recipesData.count / 10) : 1; // 假设每页10条
 
     const [filters, setFilters] = useState({
         search: '', cooking_time_minutes__lte: '', difficulty: '',
@@ -32,8 +34,13 @@ function RecipeListPage() {
     const [allTags, setAllTags] = useState([]);
     const [userInventory, setUserInventory] = useState([]);
     const [optionsLoading, setOptionsLoading] = useState(true);
-
     const [selectedInventoryForSearch, setSelectedInventoryForSearch] = useState([]);
+
+    const location = useLocation();
+    const navigate = useNavigate();
+    const query = new URLSearchParams(location.search);
+    const currentPage = parseInt(query.get('page') || '1', 10);
+
 
     useEffect(() => {
         setOptionsLoading(true);
@@ -41,26 +48,19 @@ function RecipeListPage() {
             try {
                 const tagsPromise = getDietaryTags();
                 const inventoryPromise = user ? getInventory() : Promise.resolve(null);
-
                 const [tagsRes, inventoryRes] = await Promise.all([tagsPromise, inventoryPromise]);
-                
                 setAllTags(tagsRes?.data?.results || tagsRes?.data || []);
-
                 if (inventoryRes) {
                     setUserInventory(inventoryRes?.data?.results || inventoryRes?.data || []);
                 } else {
                     setUserInventory([]);
                 }
-
             } catch (err) {
                 console.error("Failed to fetch filter options", err);
-                setAllTags([]);
-                setUserInventory([]);
             } finally {
                 setOptionsLoading(false);
             }
         };
-
         fetchOptions();
     }, [user]);
 
@@ -73,27 +73,35 @@ function RecipeListPage() {
                     activeFilters[key] = Array.isArray(value) ? value.join(',') : value;
                 }
             }
+            activeFilters.page = currentPage; // 添加 page 参数
             fetchRecipes(activeFilters);
         }, 500);
         return () => clearTimeout(timer);
-    }, [filters, fetchRecipes]);
+    }, [filters, fetchRecipes, currentPage]); // 添加 currentPage 依赖
 
     const handleFilterChange = (e) => setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const handleTagChange = (e) => setFilters(prev => ({ ...prev, dietary_tags__name__in: e.target.value }));
     const handleResetFilters = () => {
         setSelectedInventoryForSearch([]);
         setFilters({ search: '', cooking_time_minutes__lte: '', difficulty: '', cuisine_type__icontains: '', dietary_tags__name__in: [], available_ingredients: '' });
+        if (currentPage !== 1) {
+            navigate('/recipes');
+        }
     };
     const handleInventorySelectChange = (e) => {
         const { value, checked } = e.target;
         setSelectedInventoryForSearch(prev => checked ? [...prev, value] : prev.filter(id => id !== value));
     };
     const handleSmartSearch = () => setFilters(prev => ({ ...prev, available_ingredients: selectedInventoryForSearch.join(',') }));
+    
+    const handlePageChange = (event, value) => {
+        // 更新 URL, 这会触发 useEffect 重新获取数据
+        navigate(`/recipes?page=${value}`);
+    };
 
     if (error) return <Alert severity="error">获取菜谱失败，请稍后再试。</Alert>;
 
     return (
-        // vvvvvvvvvv FIX: 确保返回一个单一的根元素 <Box> vvvvvvvvvv
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h4">所有菜谱</Typography>
@@ -124,7 +132,7 @@ function RecipeListPage() {
                                     <TextField fullWidth type="number" label="最长烹饪时间(分钟)" name="cooking_time_minutes__lte" value={filters.cooking_time_minutes__lte} onChange={handleFilterChange} variant="outlined" />
                                 </Grid>
                                 <Grid item xs={12} sm={6} md={2}>
-                                    <FormControl fullWidth variant="outlined" sx={{ minWidth: 120 }}>
+                                    <FormControl fullWidth variant="outlined">
                                         <InputLabel>难度</InputLabel>
                                         <Select label="难度" name="difficulty" value={filters.difficulty} onChange={handleFilterChange}>
                                             <MenuItem value="">所有难度</MenuItem><MenuItem value="1">简单</MenuItem><MenuItem value="2">中等</MenuItem><MenuItem value="3">困难</MenuItem>
@@ -178,7 +186,13 @@ function RecipeListPage() {
                 </Paper>
             )}
 
-            {loading ? <CircularProgress sx={{ display: 'block', margin: 'auto' }} /> : (
+            {loading ? (
+                <Box sx={listContainerStyle}>
+                    {Array.from(new Array(6)).map((_, index) => (
+                        <RecipeCardSkeleton key={index} />
+                    ))}
+                </Box>
+            ) : (
                 <Box sx={listContainerStyle}>
                     {recipes.length > 0 ? (
                         recipes.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} />)
@@ -187,7 +201,18 @@ function RecipeListPage() {
                     )}
                 </Box>
             )}
-        </Box> // <--- 唯一的根元素闭合标签
+
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, pb: 4 }}>
+                {totalPages > 1 && (
+                  <Pagination 
+                    count={totalPages} 
+                    page={currentPage} 
+                    onChange={handlePageChange} 
+                    color="primary"
+                  />
+                )}
+            </Box>
+        </Box>
     );
 }
 

@@ -1,8 +1,8 @@
-// src/pages/RecipeFormPage.js (专业布局版)
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createRecipe, updateRecipe, getRecipeDetail, getAllIngredients, getDietaryTags } from '../api/api';
-import Select from 'react-select'; // 使用 react-select
+import Select from 'react-select';
+import { useNotification } from '../context/NotificationContext'; // 引入通知 hook
 
 // 导入 MUI 组件
 import {
@@ -27,8 +27,8 @@ function RecipeFormPage() {
     const { id } = useParams();
     const isEditing = !!id;
     const navigate = useNavigate();
+    const { showNotification } = useNotification();
 
-    // State 定义保持不变
     const [formData, setFormData] = useState({
         title: '', description: '', cooking_time_minutes: 30, difficulty: 1,
         cuisine_type: '', main_image: null, dietary_tags: [],
@@ -40,9 +40,9 @@ function RecipeFormPage() {
     const [allIngredients, setAllIngredients] = useState([]);
     const [allTags, setAllTags] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [submitError, setSubmitError] = useState('');
+    const [formErrors, setFormErrors] = useState({}); // 新增表单字段错误状态
 
-    // 数据获取 useEffect 保持不变
     useEffect(() => {
         setLoading(true);
         const optionsPromise = Promise.all([getAllIngredients(), getDietaryTags()])
@@ -71,10 +71,11 @@ function RecipeFormPage() {
                 if (recipe.main_image) setImagePreview(recipe.main_image);
             }).catch(err => { console.error("Failed to fetch recipe", err); throw err; });
         }
-        Promise.all([optionsPromise, recipePromise]).catch(() => setError("加载数据失败，请刷新。")).finally(() => setLoading(false));
+        Promise.all([optionsPromise, recipePromise])
+            .catch(() => setSubmitError("加载数据失败，请刷新。"))
+            .finally(() => setLoading(false));
     }, [id, isEditing]);
 
-    // 所有 handle 函数保持不变
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     const handleImageChange = (e) => {
         if (e.target.files[0]) {
@@ -100,9 +101,36 @@ function RecipeFormPage() {
     };
     const removeStepField = (index) => { if (formData.steps_data.length > 1) setFormData({ ...formData, steps_data: formData.steps_data.filter((_, i) => i !== index).map((s, i) => ({ ...s, step_number: i + 1 })) }); };
     const handleTagChange = (e) => setFormData({ ...formData, dietary_tags: e.target.value });
+
+    const validateForm = () => {
+        const errors = {};
+        if (!formData.title.trim()) {
+          errors.title = '标题不能为空。';
+        }
+        if (formData.cooking_time_minutes <= 0) {
+          errors.cooking_time_minutes = '烹饪时间必须是正数。';
+        }
+        if (formData.ingredients_data.some(ing => !ing.ingredient_id)) {
+          errors.ingredients = '所有食材都必须选择，不能留空。';
+        }
+        if (formData.steps_data.some(step => !step.description.trim())) {
+          errors.steps = '所有步骤描述都不能为空。';
+        }
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true); setError('');
+        setFormErrors({});
+        setSubmitError('');
+
+        if (!validateForm()) {
+            setSubmitError('请修正表单中的错误。');
+            return;
+        }
+
+        setLoading(true);
         const submissionData = new FormData();
         Object.keys(formData).forEach(key => {
             if (key === 'main_image' || key === 'ingredients_data' || key === 'steps_data' || key === 'dietary_tags') return;
@@ -112,12 +140,21 @@ function RecipeFormPage() {
         formData.dietary_tags.forEach(tagId => submissionData.append('dietary_tags', tagId));
         submissionData.append('ingredients_data', JSON.stringify(formData.ingredients_data));
         submissionData.append('steps_data', JSON.stringify(formData.steps_data));
+        
         try {
             const response = isEditing ? await updateRecipe(id, submissionData) : await createRecipe(submissionData);
+            showNotification(isEditing ? '菜谱更新成功！' : '菜谱创建成功！');
             navigate(`/recipes/${response.data.id}`);
         } catch (err) {
             console.error(err.response?.data || err);
-            setError('提交失败，请检查所有字段。');
+            const backendError = err.response?.data;
+            let errorMessage = '提交失败，请检查所有字段。';
+            if (typeof backendError === 'object' && backendError !== null) {
+                errorMessage = Object.entries(backendError)
+                    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : value}`)
+                    .join('\n');
+            }
+            setSubmitError(errorMessage);
             setLoading(false);
         }
     };
@@ -133,24 +170,25 @@ function RecipeFormPage() {
                     <Typography variant="h4" component="h1" gutterBottom align="center">
                         {isEditing ? '编辑菜谱' : '创建新菜谱'}
                     </Typography>
-                    {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+                    {submitError && <Alert severity="error" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>{submitError}</Alert>}
                     
                     <Box component="form" onSubmit={handleSubmit} noValidate>
-                        
-                        {/* --- Section 1: 基本信息 --- */}
                         <Typography variant="h6" component="h2" sx={{ mt: 2, mb: 2 }}>基本信息</Typography>
                         <Grid container spacing={3}>
                             <Grid item xs={12} md={8}>
-                                <TextField fullWidth required name="title" label="标题" value={formData.title} onChange={handleChange} />
-                                <TextField fullWidth multiline rows={4} name="description" label="简介" value={formData.description} onChange={handleChange} sx={{ mt: 3 }}/>
+                                <TextField 
+                                    fullWidth required name="title" label="标题" 
+                                    value={formData.title} onChange={handleChange} 
+                                    error={!!formErrors.title} helperText={formErrors.title}
+                                />
+                                <TextField 
+                                    fullWidth multiline rows={4} name="description" label="简介" 
+                                    value={formData.description} onChange={handleChange} sx={{ mt: 3 }}
+                                />
                             </Grid>
                             <Grid item xs={12} md={4} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                 <Box sx={{ width: '100%', height: 180, border: '2px dashed grey', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f9', overflow: 'hidden' }}>
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="主图预览" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <Typography color="text.secondary">图片预览</Typography>
-                                    )}
+                                    {imagePreview ? <img src={imagePreview} alt="主图预览" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Typography color="text.secondary">图片预览</Typography>}
                                 </Box>
                                 <Button variant="outlined" component="label" startIcon={<PhotoCamera />} sx={{ mt: 2 }}>
                                     上传主图
@@ -158,13 +196,16 @@ function RecipeFormPage() {
                                 </Button>
                             </Grid>
                         </Grid>
-
                         <Divider sx={{ my: 4 }} />
-
-                        {/* --- Section 2: 关键指标 --- */}
                         <Typography variant="h6" component="h2" sx={{ mb: 2 }}>关键指标</Typography>
                         <Grid container spacing={3}>
-                            <Grid item xs={12} sm={6} md={3}><TextField fullWidth type="number" name="cooking_time_minutes" label="烹饪时间(分钟)" value={formData.cooking_time_minutes} onChange={handleChange} /></Grid>
+                            <Grid item xs={12} sm={6} md={3}>
+                                <TextField 
+                                    fullWidth type="number" name="cooking_time_minutes" label="烹饪时间(分钟)" 
+                                    value={formData.cooking_time_minutes} onChange={handleChange} 
+                                    error={!!formErrors.cooking_time_minutes} helperText={formErrors.cooking_time_minutes}
+                                />
+                            </Grid>
                             <Grid item xs={12} sm={6} md={3}>
                                 <FormControl fullWidth><InputLabel>难度</InputLabel>
                                     <MuiSelect name="difficulty" label="难度" value={formData.difficulty} onChange={handleChange}>
@@ -177,21 +218,15 @@ function RecipeFormPage() {
                                <FormControl fullWidth>
                                    <InputLabel>饮食标签</InputLabel>
                                    <MuiSelect multiple name="dietary_tags" label="饮食标签" value={formData.dietary_tags} onChange={handleTagChange}
-                                       renderValue={(selected) => (
-                                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                               {selected.map(value => <Chip key={value} label={allTags.find(t=>t.id === value)?.name || ''} />)}
-                                           </Box>
-                                       )}>
+                                       renderValue={(selected) => <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{selected.map(value => <Chip key={value} label={allTags.find(t=>t.id === value)?.name || ''} />)}</Box>}>
                                        {allTags.map(tag => <MenuItem key={tag.id} value={tag.id}>{tag.name}</MenuItem>)}
                                    </MuiSelect>
                                </FormControl>
                             </Grid>
                         </Grid>
-
                         <Divider sx={{ my: 4 }} />
-
-                        {/* --- Section 3: 食材列表 --- */}
                         <Typography variant="h6" component="h2" sx={{ mb: 2 }}>食材列表</Typography>
+                        {formErrors.ingredients && <Alert severity="warning" sx={{ mb: 2 }}>{formErrors.ingredients}</Alert>}
                         {formData.ingredients_data.map((ing, index) => (
                             <Grid container spacing={1} key={index} alignItems="center" sx={{ mb: 1.5 }}>
                                 <Grid item xs={12} sm={4}><Select options={ingredientOptions} placeholder="选择食材..." value={ingredientOptions.find(opt => opt.value === ing.ingredient_id)} onChange={selectedOption => handleIngredientChange(index, 'ingredient_id', selectedOption.value)} /></Grid>
@@ -206,11 +241,9 @@ function RecipeFormPage() {
                             </Grid>
                         ))}
                         <Button startIcon={<AddCircleOutlineIcon />} onClick={addIngredientField}>添加食材</Button>
-
                         <Divider sx={{ my: 4 }} />
-
-                        {/* --- Section 4: 制作步骤 --- */}
                         <Typography variant="h6" component="h2" sx={{ mb: 2 }}>制作步骤</Typography>
+                        {formErrors.steps && <Alert severity="warning" sx={{ mb: 2 }}>{formErrors.steps}</Alert>}
                         {formData.steps_data.map((step, index) => (
                             <Grid container spacing={1} key={index} alignItems="flex-start" sx={{ mb: 1.5 }}>
                                 <Grid item><Typography sx={{ pt: 2, fontWeight: 'bold' }}>{step.step_number}.</Typography></Grid>
@@ -219,8 +252,6 @@ function RecipeFormPage() {
                             </Grid>
                         ))}
                         <Button startIcon={<AddCircleOutlineIcon />} onClick={addStepField}>添加步骤</Button>
-                        
-                        {/* --- Section 5: 提交按钮 --- */}
                         <Box sx={{ mt: 5, textAlign: 'center' }}>
                             <Button type="submit" variant="contained" size="large" disabled={loading} sx={{minWidth: 200}}>
                                 {loading ? <CircularProgress size={24} color="inherit" /> : (isEditing ? '更新菜谱' : '创建菜谱')}

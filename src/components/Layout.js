@@ -1,4 +1,5 @@
-// src/components/Layout.js
+// src/components/Layout.js (最终版)
+
 import React from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +11,7 @@ function Layout({ children }) {
 
   const handleLogout = () => {
     logout();
-    navigate('/'); // 登出后跳转到首页
+    navigate('/');
   };
 
   return (
@@ -25,6 +26,7 @@ function Layout({ children }) {
           
           {user ? (
             <>
+              <Button color="inherit" component={RouterLink} to="/my-favorites">我的收藏</Button>
               <Button color="inherit" component={RouterLink} to="/inventory">我的库存</Button>
               <Button color="inherit" component={RouterLink} to="/shopping-list">购物清单</Button>
               <Button color="inherit" component={RouterLink} to="/profile">
