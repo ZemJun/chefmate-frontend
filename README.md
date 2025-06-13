@@ -1,70 +1,102 @@
-# Getting Started with Create React App
+# ChefMate AI - 前端 (React)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+欢迎来到 ChefMate AI 的前端部分！本项目基于 React 和 Material-UI (MUI) 构建，提供一个现代、美观且响应式的用户界面，与后端 API 进行交互。
 
-## Available Scripts
+## 功能特性
 
-In the project directory, you can run:
+- **现代 UI/UX**: 使用 [Material-UI](https://mui.com/) 构建，提供精致、一致的用户体验。
+- **响应式设计**: 适配桌面、平板和移动设备。
+- **流畅动画**: 使用 [Framer Motion](https://www.framer.com/motion/) 为页面过渡和组件交互添加平滑动画。
+- **状态管理**: 通过 React Context (AuthProvider, NotificationProvider) 管理全局状态。
+- **组件化开发**: 清晰的组件结构，易于维护和扩展。
+- **动态路由**: 使用 [React Router](https://reactrouter.com/) 管理页面导航。
+- **自定义 Hooks**: 封装可复用的逻辑（如 `useApi`, `useFavorite`）。
 
-### `npm start`
+## 技术栈
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **框架**: [React](https://react.dev/) 18+
+- **UI 库**: [Material-UI (MUI)](https://mui.com/)
+- **路由**: [React Router](https://reactrouter.com/)
+- **动画**: [Framer Motion](https://www.framer.com/motion/)
+- **API 请求**: [Axios](https://axios-http.com/)
+- **表单组件**: [React Select](https://react-select.com/)
+- **包管理器**: npm 或 yarn
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## 环境搭建与运行指南
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 1. 先决条件
 
-### `npm run build`
+- Node.js 16+
+- npm (Node.js 包管理器) 或 yarn
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 2. 进入前端目录
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 3. 安装依赖
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+使用 npm 或 yarn 安装项目所需的所有库。
 
-### `npm run eject`
+**使用 npm:**
+```bash
+npm install
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+**使用 yarn:**
+```bash
+yarn install
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 4. 配置后端 API 地址
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+前端应用需要知道后端 API 的地址才能与之通信。
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+打开 `src/api/api.js` 文件，找到 `axios.create` 部分，并确保 `baseURL` 指向您正在运行的后端服务器地址。
 
-## Learn More
+```javascript
+// src/api/api.js
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+const apiClient = axios.create({
+  // 确保这里的地址和端口与您的后端服务一致
+  baseURL: 'http://127.0.0.1:8000/api', 
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 5. 运行开发服务器
 
-### Code Splitting
+一切就绪！现在可以启动前端应用了。
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+**使用 npm:**
+```bash
+npm start
+```
 
-### Analyzing the Bundle Size
+**使用 yarn:**
+```bash
+yarn start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+您的浏览器将自动打开 `http://localhost:3000`，您可以在此与 ChefMate AI 应用进行交互。
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 项目结构概览
 
-### Advanced Configuration
+```
+src/
+├── api/          # 存放所有 API 请求函数
+├── components/   # 可复用的 UI 组件 (如 Layout, RecipeCard)
+├── context/      # React Context (全局状态管理)
+├── hooks/        # 自定义 React Hooks
+├── pages/        # 页面级组件 (每个路由对应一个页面)
+├── App.js        # 应用主路由和布局
+└── index.js      # 应用入口，主题配置
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## 注意事项
 
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- **CORS 跨域问题**: 后端 `settings.py` 中的 `CORS_ALLOW_ALL_ORIGINS = True` 设置仅适用于开发环境。在生产部署时，应将其配置为只允许您的前端域名访问。
+- **后端服务**: 在启动前端应用前，请确保后端 Django 服务正在运行，否则前端将无法获取数据。
